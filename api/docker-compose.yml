@@ -1,0 +1,74 @@
+version: '3'
+services:
+    jenkins: #Serviço para CI/CD
+        container_name: jenkins #Nome do container
+        image: jenkins #Nome da imagem
+        #restart: unless-stopped #Container para/reinicia, se o daemon do docker for parado/reiniciado
+        #variáveis de ambiente para corrigir problema na instalação dos plugins
+        #environment: 
+            #JAVA_OPTS: "-Dhttp.proxyHost=jenkins -Dhttp.proxyPort=3128 -Dhttps.proxyHost=jenkins -Dhttps.proxyPort=3128"
+        #Mapeando as portas da máquina local com o container
+        ports:
+            - "8080:8080"
+        #Volume para persistir os dados do container
+        volumes:
+            - "jenkins:/var/lib/jenkins"
+        #Isolando os containers para se comunicarem entre si, dentro dessa network
+        networks:
+            - devops
+
+    sonarqube: #Serviço para gerar relatório de qualidade dos códigos
+        container_name: sonarqube #Nome do container
+        image: sonarqube:alpine #Nome da imagem
+        #restart: unless-stopped #Container para/reinicia, se o daemon do docker for parado/reiniciado
+        #Mapeando as portas da máquina local com o container
+        ports:
+            - "9000:9000"
+        #Isolando os containers para se comunicarem entre si, dentro dessa network
+        networks:
+            - devops
+            
+    prometheus: #Serviço para centralizar o monitoramento
+        container_name: prometheus #Nome do container
+        image: prom/prometheus #Nome da imagem
+        #restart: unless-stopped #Container para/reinicia, se o daemon do docker for parado/reiniciado
+        #Mapeando as portas da máquina local com o container
+        ports:
+            - "9090:9090"
+        #Volume para persistir os dados do container
+        volumes:
+            - "prometheus/var/lib/prometheus"
+        #Isolando os containers para se comunicarem entre si, dentro dessa network
+        networks:
+            - devops
+        
+    grafana: #Serviço para exiber o dashboard das métricas do container e requisições da API, coletadas pelo o Prometheus (Client Library Python e CAdvisor)
+        container_name: grafana # Nome do container
+        image: grafana/grafana #Nome da imagem
+        #restart: unless-stopped #Container para/reinicia, se o daemon do docker for parado/reiniciado
+        #Mapeando as portas da máquina local com o container
+        ports: 
+            - "3000:3000"
+        #Volume para persistir os dados do container
+        volumes:
+            - "grafana:/var/lib/grafana"
+        #Isolando os containers para se comunicarem entre si, dentro dessa network
+        networks:
+            - devops
+        #Esse serviço depende que o serviço do Prometheus esteja em execução, para gerar os gráficos do dashboard
+        depends_on: 
+            - prometheus
+
+#Criando volumes para mapeamento de diretórios entre a máquina local e os containers
+volumes:
+    jenkins:
+        driver: local
+    prometheus:
+        driver: local
+    grafana:
+        driver: local
+
+#Criando network para comunicação entre os containers
+networks:
+    devops:
+        driver: bridge
